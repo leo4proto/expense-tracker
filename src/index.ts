@@ -1,12 +1,16 @@
 import express from "express";
 import { env } from "./config/env.js";
 import whatsappWebhook from "./webhook/whatsapp.js";
+import { requestLogger } from "./middleware/request-logger.js";
 
 const app = express();
 
 // Parse URL-encoded bodies (Twilio sends form data)
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Request logging
+app.use(requestLogger);
 
 // Health check endpoint
 app.get("/health", (_req, res) => {
