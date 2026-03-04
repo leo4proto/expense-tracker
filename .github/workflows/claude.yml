@@ -38,10 +38,12 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          show_full_output: true
           prompt: |
             Implement the changes described in this issue completely and open a pull request.
             Do not ask for clarification — make reasonable assumptions and document them in the PR description.
             Follow all conventions in CLAUDE.md. The PR must pass `npm run build` and `npm test`.
           claude_args: |
+            --max-turns 15
             --allowedTools "Bash(npm install),Bash(npm run build),Bash(npm test),Bash(npm run lint),Bash(git *),View,Edit,Write,GlobTool,GrepTool"
             --system-prompt "You are working on a TypeScript/Node.js WhatsApp expense tracking agent deployed on Render. Always follow the instructions in CLAUDE.md at the root of this repo."
