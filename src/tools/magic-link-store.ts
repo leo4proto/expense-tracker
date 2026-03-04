@@ -1,26 +1,36 @@
 import crypto from "crypto";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { env } from "../config/env.js";
 
 export interface MagicLinkToken {
   token: string;
   phone: string;
-  expiresAt: number;
+  expiresAt: number; // Unix milliseconds
   used: boolean;
 }
 
 export const TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
-// In-memory store: token -> MagicLinkToken
-const tokenStore = new Map<string, MagicLinkToken>();
+const COLLECTION = "magic_link_tokens";
 
-export function createMagicLink(phone: string, baseUrl: string): string {
+function getDb() {
+  if (getApps().length === 0) {
+    const credJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    const credential = credJson
+      ? cert(JSON.parse(credJson))
+      : cert(process.env.GOOGLE_APPLICATION_CREDENTIALS as string);
+    initializeApp({ credential, projectId: env.firebase.projectId });
+  }
+  return getFirestore();
+}
+
+export async function createMagicLink(phone: string, baseUrl: string): Promise<string> {
   const token = crypto.randomBytes(32).toString("hex");
-  const entry: MagicLinkToken = {
-    token,
-    phone,
-    expiresAt: Date.now() + TOKEN_TTL_MS,
-    used: false,
-  };
-  tokenStore.set(token, entry);
+  await getDb()
+    .collection(COLLECTION)
+    .doc(token)
+    .set({ phone, expiresAt: Date.now() + TOKEN_TTL_MS, used: false });
   return `${baseUrl}/api/magic-link/verify?token=${token}`;
 }
 
@@ -28,36 +38,42 @@ export function createMagicLink(phone: string, baseUrl: string): string {
  * Validates and atomically consumes a magic-link token.
  * Returns the associated phone number on success, or null if the token
  * is unknown, already used, or expired.
- *
- * Node.js is single-threaded, so the Map read-modify-delete is atomic.
  */
-export function verifyMagicLink(token: string): string | null {
-  const entry = tokenStore.get(token);
-  if (!entry) return null;
-  if (entry.used) {
-    tokenStore.delete(token);
+export async function verifyMagicLink(token: string): Promise<string | null> {
+  const docRef = getDb().collection(COLLECTION).doc(token);
+  const doc = await docRef.get();
+
+  if (!doc.exists) return null;
+
+  const data = doc.data() as { phone: string; expiresAt: number; used: boolean };
+
+  if (data.used) {
+    await docRef.delete();
     return null;
   }
-  if (Date.now() > entry.expiresAt) {
-    tokenStore.delete(token);
+
+  if (Date.now() > data.expiresAt) {
+    await docRef.delete();
     return null;
   }
-  // Mark as used and remove — prevents replay attacks
-  entry.used = true;
-  tokenStore.delete(token);
-  return entry.phone;
+
+  // Consume the token — prevents replay attacks
+  await docRef.delete();
+  return data.phone;
 }
 
-export function purgeExpiredTokens(): void {
+export async function purgeExpiredTokens(): Promise<void> {
   const now = Date.now();
-  for (const [token, entry] of tokenStore.entries()) {
-    if (now > entry.expiresAt) {
-      tokenStore.delete(token);
-    }
-  }
+  const snapshot = await getDb().collection(COLLECTION).get();
+  await Promise.all(
+    snapshot.docs
+      .filter(d => (d.data() as { expiresAt: number }).expiresAt < now)
+      .map(d => d.ref.delete())
+  );
 }
 
-/** Exported for testing only — clears the in-memory store. */
-export function clearTokenStore(): void {
-  tokenStore.clear();
+/** Exported for testing only — clears the Firestore collection. */
+export async function clearTokenStore(): Promise<void> {
+  const snapshot = await getDb().collection(COLLECTION).get();
+  await Promise.all(snapshot.docs.map(d => d.ref.delete()));
 }

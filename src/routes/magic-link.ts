@@ -21,7 +21,7 @@ function getBaseUrl(req: Request): string {
  * Note: the WhatsApp webhook calls createMagicLink() directly rather than
  * hitting this HTTP endpoint; this endpoint exists for API completeness.
  */
-router.post("/generate", (req: Request, res: Response) => {
+router.post("/generate", async (req: Request, res: Response) => {
   const { phone } = req.body as { phone?: string };
 
   if (!phone) {
@@ -36,7 +36,7 @@ router.post("/generate", (req: Request, res: Response) => {
   }
 
   const baseUrl = getBaseUrl(req);
-  const link = createMagicLink(phone, baseUrl);
+  const link = await createMagicLink(phone, baseUrl);
   res.json({ link });
 });
 
@@ -46,7 +46,7 @@ router.post("/generate", (req: Request, res: Response) => {
  * Validates a one-time token. On success, creates an HTTP-only session cookie
  * and redirects to /dashboard. On failure, redirects to /error.
  */
-router.get("/verify", (req: Request, res: Response) => {
+router.get("/verify", async (req: Request, res: Response) => {
   const { token } = req.query as { token?: string };
 
   if (!token) {
@@ -54,7 +54,7 @@ router.get("/verify", (req: Request, res: Response) => {
     return;
   }
 
-  const phone = verifyMagicLink(token);
+  const phone = await verifyMagicLink(token);
   if (!phone) {
     res.redirect("/error?reason=invalid_or_expired");
     return;

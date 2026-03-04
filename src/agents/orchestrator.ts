@@ -51,7 +51,7 @@ export async function processExpense(
     }
     try {
       const baseUrl = buildBaseUrl(payload.From);
-      const link = createMagicLink(payload.From, baseUrl);
+      const link = await createMagicLink(payload.From, baseUrl);
       return {
         success: true,
         message: `📊 Here's your dashboard link (valid for 15 minutes, one-time use):\n${link}`,
