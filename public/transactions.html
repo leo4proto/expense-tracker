@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Transactions — Expense Tracker</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,7 +21,11 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      max-width: 430px;
+    }
+
+    /* ── Page wrapper ── */
+    .page-wrap {
+      max-width: 1280px;
       margin: 0 auto;
       padding: 0 0 2rem;
     }
@@ -87,7 +91,7 @@
     .summary-bar span { font-size: 0.8rem; color: var(--muted); }
     .summary-bar strong { color: var(--text); }
 
-    /* ── Table (desktop-ish) ── */
+    /* ── Table ── */
     .tx-table {
       width: 100%;
       border-collapse: collapse;
@@ -122,8 +126,8 @@
       color: var(--muted);
     }
 
-    /* ── Card layout for small screens ── */
-    @media (max-width: 380px) {
+    /* ── Card layout for small screens (< 480px) ── */
+    @media (max-width: 480px) {
       .tx-table, .tx-table thead, .tx-table tbody, .tx-table th, .tx-table td, .tx-table tr {
         display: block;
       }
@@ -150,6 +154,32 @@
       }
     }
 
+    /* ── Responsive: Tablet (≥ 768px) ── */
+    @media (min-width: 768px) {
+      header { padding: 1.5rem 2rem 1rem; }
+      .date-filter { padding: 0 2rem 1rem; max-width: 480px; }
+      .summary-bar { padding: 0.5rem 2rem 0.75rem; }
+
+      /* Fixed column widths so merchant column expands to fill remaining space */
+      .tx-table col.col-date     { width: 120px; }
+      .tx-table col.col-category { width: 140px; }
+      .tx-table col.col-amount   { width: 130px; }
+    }
+
+    /* ── Responsive: Desktop (≥ 1024px) ── */
+    @media (min-width: 1024px) {
+      header { padding: 1.75rem 2.5rem 1rem; }
+      .date-filter { padding: 0 2.5rem 1rem; }
+      .summary-bar { padding: 0.5rem 2.5rem 0.75rem; }
+    }
+
+    /* ── Responsive: Large desktop (≥ 1280px) ── */
+    @media (min-width: 1280px) {
+      header { padding: 2rem 3rem 1rem; }
+      .date-filter { padding: 0 3rem 1rem; }
+      .summary-bar { padding: 0.5rem 3rem 0.75rem; }
+    }
+
     /* ── Empty / loading ── */
     .empty-state {
       text-align: center;
@@ -171,46 +201,54 @@
   </style>
 </head>
 <body>
-  <header>
-    <a class="back-btn" href="/dashboard" aria-label="Back to dashboard">←</a>
-    <h1>Transactions</h1>
-  </header>
+  <div class="page-wrap">
+    <header>
+      <a class="back-btn" href="/dashboard" aria-label="Back to dashboard">←</a>
+      <h1>Transactions</h1>
+    </header>
 
-  <!-- Date range filter -->
-  <div class="date-filter">
-    <div class="date-field">
-      <label for="from-date">From</label>
-      <input type="date" id="from-date" />
+    <!-- Date range filter -->
+    <div class="date-filter">
+      <div class="date-field">
+        <label for="from-date">From</label>
+        <input type="date" id="from-date" />
+      </div>
+      <div class="date-field">
+        <label for="to-date">To</label>
+        <input type="date" id="to-date" />
+      </div>
     </div>
-    <div class="date-field">
-      <label for="to-date">To</label>
-      <input type="date" id="to-date" />
+
+    <!-- Summary row -->
+    <div class="summary-bar">
+      <span id="tx-count">—</span>
+      <span id="tx-total">—</span>
     </div>
-  </div>
 
-  <!-- Summary row -->
-  <div class="summary-bar">
-    <span id="tx-count">—</span>
-    <span id="tx-total">—</span>
+    <!-- Table -->
+    <table class="tx-table">
+      <colgroup>
+        <col class="col-date" />
+        <col /><!-- merchant: fills remaining space -->
+        <col class="col-category" />
+        <col class="col-amount" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Merchant</th>
+          <th>Category</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody id="tx-body">
+        <!-- Loading skeleton rows -->
+        <tr class="loader-row"><td colspan="4"><div class="skeleton">&nbsp;</div></td></tr>
+        <tr class="loader-row"><td colspan="4"><div class="skeleton" style="width:80%">&nbsp;</div></td></tr>
+        <tr class="loader-row"><td colspan="4"><div class="skeleton" style="width:90%">&nbsp;</div></td></tr>
+      </tbody>
+    </table>
   </div>
-
-  <!-- Table -->
-  <table class="tx-table">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Merchant</th>
-        <th>Category</th>
-        <th>Amount</th>
-      </tr>
-    </thead>
-    <tbody id="tx-body">
-      <!-- Loading skeleton rows -->
-      <tr class="loader-row"><td colspan="4"><div class="skeleton">&nbsp;</div></td></tr>
-      <tr class="loader-row"><td colspan="4"><div class="skeleton" style="width:80%">&nbsp;</div></td></tr>
-      <tr class="loader-row"><td colspan="4"><div class="skeleton" style="width:90%">&nbsp;</div></td></tr>
-    </tbody>
-  </table>
 
   <script>
     function fmt(n) { return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
