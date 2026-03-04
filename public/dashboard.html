@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Expense Dashboard</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
@@ -25,7 +25,11 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      max-width: 430px;
+    }
+
+    /* ── Page wrapper ── */
+    .page-wrap {
+      max-width: 1280px;
       margin: 0 auto;
       padding: 0 0 2rem;
     }
@@ -80,6 +84,10 @@
       padding: 1.25rem;
       margin: 0 1rem 1rem;
     }
+
+    /* ── Dashboard responsive grid ── */
+    /* Mobile default: cards stacked (block flow) */
+    .dashboard-grid { display: block; }
 
     /* ── Summary card ── */
     .summary-label {
@@ -136,8 +144,18 @@
       letter-spacing: 0.05em;
     }
 
+    /* Chart + legend: stacked on mobile, side-by-side on tablet+ */
+    .chart-layout {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
     #chart-container {
+      /* Mobile: centered, capped at 260px so chart doesn't overwhelm small screens */
       width: 100%;
+      max-width: 260px;
+      margin: 0 auto;
       display: flex;
       justify-content: center;
     }
@@ -146,6 +164,7 @@
 
     /* Legend */
     .legend {
+      width: 100%;
       margin-top: 1.25rem;
       display: flex;
       flex-direction: column;
@@ -206,45 +225,114 @@
       transition: background 0.15s, border-color 0.15s;
     }
     .cta-btn:hover { background: var(--surface2); border-color: #444; }
+
+    /* ── Responsive: Tablet (≥ 768px) ── */
+    @media (min-width: 768px) {
+      header { padding: 1.5rem 2rem 0.75rem; }
+      .filter-bar { padding: 0.5rem 2rem 1rem; }
+      .card { margin: 0 2rem 1rem; }
+      .cta-btn { margin: 0 2rem; }
+
+      /* Chart and legend side by side within the chart card */
+      .chart-layout {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 1.5rem;
+      }
+
+      #chart-container {
+        width: 260px;
+        max-width: none;
+        margin: 0;
+        flex-shrink: 0;
+      }
+
+      .legend {
+        width: auto;
+        flex: 1;
+        margin-top: 0;
+        align-self: center;
+      }
+    }
+
+    /* ── Responsive: Desktop (≥ 1024px) ── */
+    @media (min-width: 1024px) {
+      header { padding: 1.75rem 2.5rem 0.75rem; }
+      .filter-bar { padding: 0.5rem 2.5rem 1rem; }
+      .cta-btn { margin: 0 2.5rem; }
+
+      /* 2-column layout: summary card (1fr) | chart card (2fr) */
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: minmax(260px, 1fr) 2fr;
+        gap: 1rem;
+        align-items: start;
+        padding: 0 1.5rem;
+      }
+
+      .dashboard-grid .card {
+        margin: 0 0 1rem;
+      }
+
+      #chart-container {
+        width: 300px;
+      }
+    }
+
+    /* ── Responsive: Large desktop (≥ 1280px) ── */
+    @media (min-width: 1280px) {
+      header { padding: 2rem 3rem 0.75rem; }
+      .filter-bar { padding: 0.5rem 3rem 1rem; }
+      .dashboard-grid { padding: 0 2rem; }
+      .cta-btn { margin: 0 3rem; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1>💸 Expenses</h1>
-      <div class="subtitle" id="date-subtitle"></div>
-    </div>
-  </header>
+  <div class="page-wrap">
+    <header>
+      <div>
+        <h1>💸 Expenses</h1>
+        <div class="subtitle" id="date-subtitle"></div>
+      </div>
+    </header>
 
-  <!-- Range filter bar -->
-  <nav class="filter-bar" id="filter-bar" aria-label="Time range">
-    <button class="pill active" data-range="week">Week</button>
-    <button class="pill" data-range="month">Month</button>
-    <button class="pill" data-range="last_month">Last Month</button>
-    <button class="pill" data-range="ytd">YTD</button>
-  </nav>
+    <!-- Range filter bar -->
+    <nav class="filter-bar" id="filter-bar" aria-label="Time range">
+      <button class="pill active" data-range="week">Week</button>
+      <button class="pill" data-range="month">Month</button>
+      <button class="pill" data-range="last_month">Last Month</button>
+      <button class="pill" data-range="ytd">YTD</button>
+    </nav>
 
-  <!-- Summary card -->
-  <div class="card" id="summary-card">
-    <div class="summary-label">Total Spending</div>
-    <div id="summary-amount" class="summary-amount">
-      <span class="skeleton" style="display:inline-block;width:160px;height:2.5rem;">&nbsp;</span>
+    <!-- Responsive grid: 1-col on mobile/tablet, 2-col on desktop -->
+    <div class="dashboard-grid">
+      <!-- Summary card -->
+      <div class="card" id="summary-card">
+        <div class="summary-label">Total Spending</div>
+        <div id="summary-amount" class="summary-amount">
+          <span class="skeleton" style="display:inline-block;width:160px;height:2.5rem;">&nbsp;</span>
+        </div>
+        <div class="delta-row" id="delta-row" style="display:none"></div>
+        <div class="date-range-label" id="date-range-label"></div>
+      </div>
+
+      <!-- Pie chart card -->
+      <div class="card">
+        <div class="chart-title">By Category</div>
+        <!-- chart-layout: column on mobile, row on tablet+ -->
+        <div class="chart-layout">
+          <div id="chart-container">
+            <svg id="pie-chart"></svg>
+          </div>
+          <div class="legend" id="legend"></div>
+        </div>
+      </div>
     </div>
-    <div class="delta-row" id="delta-row" style="display:none"></div>
-    <div class="date-range-label" id="date-range-label"></div>
+
+    <!-- View all transactions -->
+    <a class="cta-btn" href="/transactions">View All Transactions →</a>
   </div>
-
-  <!-- Pie chart card -->
-  <div class="card">
-    <div class="chart-title">By Category</div>
-    <div id="chart-container">
-      <svg id="pie-chart"></svg>
-    </div>
-    <div class="legend" id="legend"></div>
-  </div>
-
-  <!-- View all transactions -->
-  <a class="cta-btn" href="/transactions">View All Transactions →</a>
 
   <script>
     // ── Colour palette ───────────────────────────────────────────────────────
@@ -257,6 +345,7 @@
     // ── State ────────────────────────────────────────────────────────────────
     let currentRange = 'week';
     let colorMap = {};
+    let lastCategoryData = null;
 
     // ── Helpers ──────────────────────────────────────────────────────────────
     function fmt(n) { return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
@@ -320,20 +409,23 @@
       document.getElementById('date-subtitle').textContent = rangeLabel(currentRange);
     }
 
-    // ── D3 Pie chart ─────────────────────────────────────────────────────────
-    const CHART_SIZE = 220;
-    const OUTER_R = CHART_SIZE / 2 - 10;
-    const INNER_R = OUTER_R * 0.55;
+    // ── D3 Pie chart (responsive via ResizeObserver) ──────────────────────────
+    const MIN_CHART_SIZE = 160;
+    const MAX_CHART_SIZE = 340;
+
+    let chartSize = MIN_CHART_SIZE;
+    let outerR = chartSize / 2 - 10;
+    let innerR = outerR * 0.55;
 
     const svg = d3.select('#pie-chart')
-      .attr('width', CHART_SIZE)
-      .attr('height', CHART_SIZE)
-      .attr('viewBox', `0 0 ${CHART_SIZE} ${CHART_SIZE}`);
+      .attr('width', chartSize)
+      .attr('height', chartSize)
+      .attr('viewBox', `0 0 ${chartSize} ${chartSize}`);
 
     const g = svg.append('g')
-      .attr('transform', `translate(${CHART_SIZE / 2},${CHART_SIZE / 2})`);
+      .attr('transform', `translate(${chartSize / 2},${chartSize / 2})`);
 
-    const arc = d3.arc().innerRadius(INNER_R).outerRadius(OUTER_R);
+    const arc = d3.arc().innerRadius(innerR).outerRadius(outerR);
     const pie = d3.pie().value(d => d.total).sort(null);
 
     // Store previous angles for tweened transitions
@@ -350,7 +442,48 @@
       };
     }
 
+    /**
+     * Reads the chart container's current clientWidth and updates the SVG
+     * dimensions and arc generator radii. Returns true if dimensions changed
+     * (used by ResizeObserver to decide whether to re-render).
+     */
+    function updateChartSvgSize() {
+      const container = document.getElementById('chart-container');
+      const containerWidth = container.clientWidth;
+      if (!containerWidth) return false;
+
+      const newSize = Math.min(Math.max(containerWidth, MIN_CHART_SIZE), MAX_CHART_SIZE);
+      if (Math.abs(newSize - chartSize) < 8) return false;
+
+      chartSize = newSize;
+      outerR = chartSize / 2 - 10;
+      innerR = outerR * 0.55;
+
+      svg
+        .attr('width', chartSize)
+        .attr('height', chartSize)
+        .attr('viewBox', `0 0 ${chartSize} ${chartSize}`);
+
+      g.attr('transform', `translate(${chartSize / 2},${chartSize / 2})`);
+      arc.innerRadius(innerR).outerRadius(outerR);
+
+      return true;
+    }
+
+    // Re-render chart when container dimensions change (e.g. window resize,
+    // breakpoint transitions between single-column and side-by-side layouts).
+    const chartResizeObserver = new ResizeObserver(() => {
+      if (updateChartSvgSize() && lastCategoryData) {
+        renderChart(lastCategoryData);
+      }
+    });
+    chartResizeObserver.observe(document.getElementById('chart-container'));
+
     function renderChart(data) {
+      lastCategoryData = data;
+      // Ensure SVG dimensions match the current container size before rendering.
+      updateChartSvgSize();
+
       const items = data.items;
 
       // Assign stable colours per category
@@ -368,7 +501,7 @@
         return;
       }
 
-      svg.attr('height', CHART_SIZE);
+      svg.attr('height', chartSize);
       const arcs = pie(items);
 
       const paths = g.selectAll('path').data(arcs, d => d.data.category);
