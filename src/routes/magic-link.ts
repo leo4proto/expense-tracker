@@ -69,7 +69,17 @@ router.get("/verify", async (req: Request, res: Response) => {
     maxAge: SESSION_TTL_MS,
   });
 
-  res.redirect("/dashboard");
+  // Serve a 200 HTML page that navigates via JavaScript rather than issuing a
+  // 302 redirect.  Some mobile WebViews (notably WKWebView on iOS) silently
+  // drop Set-Cookie headers on 302 responses, so the browser never stores the
+  // session cookie and the /dashboard middleware immediately redirects back to
+  // /error?reason=no_session.  A 200 response guarantees the browser commits
+  // the Set-Cookie header before any JavaScript runs.
+  res.type("text/html").send(
+    '<!doctype html><html><head><meta charset="utf-8"><title>Connecting\u2026</title>' +
+      "<script>location.replace('/dashboard')</script>" +
+      "</head><body></body></html>"
+  );
 });
 
 export default router;
