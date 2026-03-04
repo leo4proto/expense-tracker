@@ -284,10 +284,6 @@
         ]);
 
         if (!summaryRes.ok || !categoryRes.ok) {
-          if (summaryRes.status === 401 || categoryRes.status === 401) {
-            window.location.href = '/error?reason=expired';
-            return;
-          }
           throw new Error('API error');
         }
 

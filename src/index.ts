@@ -4,8 +4,6 @@ import express from "express";
 import { env } from "./config/env.js";
 import whatsappWebhook from "./webhook/whatsapp.js";
 import { requestLogger } from "./middleware/request-logger.js";
-import { requireSession } from "./middleware/auth.js";
-import magicLinkRouter from "./routes/magic-link.js";
 import expensesRouter from "./routes/expenses.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,25 +27,17 @@ app.get("/health", (_req, res) => {
 // WhatsApp webhook
 app.use("/webhook/whatsapp", whatsappWebhook);
 
-// Magic link authentication routes
-app.use("/api/magic-link", magicLinkRouter);
-
-// Expense data API routes (authenticated)
+// Expense data API routes
 app.use("/api/expenses", expensesRouter);
 
-// Dashboard page (authenticated)
-app.get("/dashboard", requireSession, (_req, res) => {
+// Dashboard page
+app.get("/dashboard", (_req, res) => {
   res.sendFile(path.join(publicDir, "dashboard.html"));
 });
 
-// Transactions page (authenticated)
-app.get("/transactions", requireSession, (_req, res) => {
+// Transactions page
+app.get("/transactions", (_req, res) => {
   res.sendFile(path.join(publicDir, "transactions.html"));
-});
-
-// Error / expired-session page (public)
-app.get("/error", (_req, res) => {
-  res.sendFile(path.join(publicDir, "error.html"));
 });
 
 // Error handling middleware

@@ -19,11 +19,14 @@ export async function queryExpenses(
 ): Promise<Expense[]> {
   const db = getDb();
 
-  let query = db
+  let query: FirebaseFirestore.Query = db
     .collection("expenses")
-    .where("submittedBy", "==", params.submittedBy)
     .where("date", ">=", params.startDate)
     .where("date", "<=", params.endDate);
+
+  if (params.submittedBy) {
+    query = query.where("submittedBy", "==", params.submittedBy);
+  }
 
   if (params.category) {
     query = query.where("category", "==", params.category);

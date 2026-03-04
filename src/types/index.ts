@@ -42,7 +42,7 @@ export interface OrchestratorResult {
 }
 
 export interface ExpenseQueryParams {
-  submittedBy: string;
+  submittedBy?: string;
   startDate: string;
   endDate: string;
   category?: string;

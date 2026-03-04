@@ -1,7 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { requireSession } from "../middleware/auth.js";
 import { queryExpenses } from "../tools/firestore-reader.js";
-import { getUserName } from "../config/phone-map.js";
 
 export interface DateRange {
   startDate: string;
@@ -138,9 +136,6 @@ const VALID_RANGES = new Set(["week", "month", "last_month", "ytd"]);
 
 const router = Router();
 
-// All expense endpoints require an active session
-router.use(requireSession);
-
 /**
  * GET /api/expenses/summary?range=week|month|last_month|ytd
  *
@@ -155,20 +150,15 @@ router.get("/summary", async (req: Request, res: Response) => {
     return;
   }
 
-  const phone = res.locals["userPhone"] as string;
-  const submittedBy = getUserName(phone);
-
   try {
     const dateRange = getDateRange(range);
 
     const [current, previous] = await Promise.all([
       queryExpenses({
-        submittedBy,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       }),
       queryExpenses({
-        submittedBy,
         startDate: dateRange.prevStartDate,
         endDate: dateRange.prevEndDate,
       }),
@@ -211,13 +201,9 @@ router.get("/by-category", async (req: Request, res: Response) => {
     return;
   }
 
-  const phone = res.locals["userPhone"] as string;
-  const submittedBy = getUserName(phone);
-
   try {
     const dateRange = getDateRange(range);
     const expenses = await queryExpenses({
-      submittedBy,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,
     });
@@ -278,11 +264,8 @@ router.get("/transactions", async (req: Request, res: Response) => {
     return;
   }
 
-  const phone = res.locals["userPhone"] as string;
-  const submittedBy = getUserName(phone);
-
   try {
-    const expenses = await queryExpenses({ submittedBy, startDate, endDate });
+    const expenses = await queryExpenses({ startDate, endDate });
 
     const items: TransactionRow[] = expenses
       .map((e) => ({

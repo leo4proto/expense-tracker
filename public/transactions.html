@@ -245,7 +245,6 @@
       try {
         const res = await fetch(`/api/expenses/transactions?from=${from}&to=${to}`);
         if (!res.ok) {
-          if (res.status === 401) { window.location.href = '/error?reason=expired'; return; }
           throw new Error('API error');
         }
         const data = await res.json();
