@@ -4,6 +4,7 @@ module.exports = {
   testEnvironment: "node",
   extensionsToTreatAsEsm: [".ts"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
+  setupFiles: ["./jest.setup.cjs"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },

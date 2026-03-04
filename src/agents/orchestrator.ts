@@ -6,7 +6,9 @@ import {
   getSuggestedCategories,
 } from "../tools/category-normalizer.js";
 import { writeExpense } from "../tools/firestore-writer.js";
-import { getUserName } from "../config/phone-map.js";
+import { getUserName, getPhoneMap } from "../config/phone-map.js";
+import { createMagicLink } from "../tools/magic-link-store.js";
+import { env } from "../config/env.js";
 import type {
   TwilioWhatsAppPayload,
   OrchestratorResult,
@@ -26,11 +28,42 @@ function isExpenseQuery(text: string): boolean {
   return false;
 }
 
+function buildBaseUrl(from: string): string {
+  // Use env.baseUrl when set; fall back to a placeholder that shows the
+  // token so the user can still act on it even without a proper domain.
+  return env.baseUrl || `https://your-app.onrender.com`;
+}
+
 export async function processExpense(
   payload: TwilioWhatsAppPayload
 ): Promise<OrchestratorResult> {
   const hasMedia = parseInt(payload.NumMedia, 10) > 0;
   const submittedBy = getUserName(payload.From);
+
+  // Handle dashboard magic link request
+  if (!hasMedia && payload.Body && payload.Body.trim().toLowerCase() === "dashboard") {
+    const phoneMap = getPhoneMap();
+    if (!phoneMap.has(payload.From)) {
+      return {
+        success: false,
+        message: "⛔ Sorry, your number is not authorized to access the dashboard.",
+      };
+    }
+    try {
+      const baseUrl = buildBaseUrl(payload.From);
+      const link = createMagicLink(payload.From, baseUrl);
+      return {
+        success: true,
+        message: `📊 Here's your dashboard link (valid for 15 minutes, one-time use):\n${link}`,
+      };
+    } catch (error) {
+      console.error("Failed to generate magic link:", error);
+      return {
+        success: false,
+        message: "⚠️ Something went wrong. Please try again.",
+      };
+    }
+  }
 
   // Route to query handler if the message looks like a spending question
   if (!hasMedia && payload.Body && isExpenseQuery(payload.Body)) {
